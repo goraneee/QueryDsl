@@ -2,11 +2,15 @@ package study.querydsl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.member;
+import static study.querydsl.entity.QTeam.team;
 
+import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +25,9 @@ public class QuerydslBasicTest {
 
     @PersistenceContext
     EntityManager em;
+
+    @PersistenceUnit
+    EntityManagerFactory emf;
 
     JPAQueryFactory queryFactory;
 
@@ -94,5 +101,69 @@ public class QuerydslBasicTest {
 
     }
 
+
+    @Test
+    public void paging() {
+
+        QueryResults<Member> queryResult = queryFactory
+            .selectFrom(member)
+            .orderBy(member.username.desc())
+            .offset(1)
+            .limit(2)
+            .fetchResults();
+        System.out.println(queryResult.toString());
+        assertThat(queryResult.getTotal()).isEqualTo(4);
+        assertThat(queryResult.getLimit()).isEqualTo(2);
+        assertThat(queryResult.getOffset()).isEqualTo(1);
+        assertThat(queryResult.getResults().size()).isEqualTo(2);
+    }
+
+    @Test
+    public void theta_join() throws Exception {
+
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+
+        List<Member> result = queryFactory
+            .select(member)
+            .from(member, team)
+            .where(member.username.eq(team.name))
+            .fetch();
+
+        assertThat(result).extracting("username")
+            .containsExactly("teamA", "teamB");
+    }
+
+    @Test
+    public void fetchJoinNo() throws Exception {
+
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+            .selectFrom(member)
+            .where(member.username.eq("member1"))
+            .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        assertThat(loaded).as("페치 조인 미적용").isFalse();
+
+    }
+
+    @Test
+    public void fetchJoinUse() throws Exception {
+
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+            .selectFrom(member)
+            .where(member.username.eq("member1"))
+            .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        assertThat(loaded).as("페치 조인 미적용").isFalse();
+
+    }
 
 }
