@@ -6,6 +6,8 @@ import static study.querydsl.entity.QTeam.team;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
@@ -234,4 +236,47 @@ public class QuerydslBasicTest {
                     .from(memberSub)));
         }
     }
+
+
+    @Test
+    void orderByCase() {
+
+        // 단순 조건
+        List<String> result1 = queryFactory.select(
+                member.age
+                    .when(10).then("열살")
+                    .when(20).then("스무살")
+                    .otherwise("기타"))
+            .from(member)
+            .fetch();
+
+        // 복잡 조건
+        List<String> result2 = queryFactory.select(
+                new CaseBuilder()
+                    .when(member.age.between(0, 20)).then("0~20살")
+                    .when(member.age.between(21, 30)).then("21~30살")
+                    .otherwise("기타"))
+            .from(member)
+            .fetch();
+
+        // orderBy에서 Case문 함께 사용하기
+        NumberExpression<Integer> rankPath = new CaseBuilder()
+            .when(member.age.between(0, 20)).then(2)
+            .when(member.age.between(21, 30)).then(1)
+            .otherwise(3);
+        List<Tuple> result3 = queryFactory
+            .select(member.username, member.age, rankPath)
+            .from(member)
+            .orderBy(rankPath.desc())
+            .fetch();
+        for (Tuple tuple : result3) {
+            String username = tuple.get(member.username);
+            Integer age = tuple.get(member.age);
+            Integer rank = tuple.get(rankPath);
+            System.out.println("username = " + username + " age = " + age + " rank = " + rank);
+
+        }
+
+    }
+
 }
