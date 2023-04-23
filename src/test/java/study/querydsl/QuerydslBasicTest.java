@@ -7,6 +7,7 @@ import static study.querydsl.entity.QTeam.team;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -237,7 +238,6 @@ public class QuerydslBasicTest {
         }
     }
 
-
     @Test
     void orderByCase() {
 
@@ -274,9 +274,21 @@ public class QuerydslBasicTest {
             Integer age = tuple.get(member.age);
             Integer rank = tuple.get(rankPath);
             System.out.println("username = " + username + " age = " + age + " rank = " + rank);
-
         }
+    }
 
+    @Test
+    void constantAndConcat() {
+        Tuple result = queryFactory.select(member.username, Expressions.constant("A"))
+            .from(member)
+            .from(member)
+            .fetchFirst();
+
+        String result2 = queryFactory
+            .select(member.username.concat("_").concat(member.age.stringValue()))
+            .from(member)
+            .where(member.username.eq("member1"))
+            .fetchOne();
     }
 
 }
