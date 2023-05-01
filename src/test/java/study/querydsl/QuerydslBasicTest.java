@@ -4,8 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
@@ -16,13 +20,17 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceUnit;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.entity.Member;
+import study.querydsl.entity.MemberDto;
 import study.querydsl.entity.QMember;
+import study.querydsl.entity.QMemberDto;
 import study.querydsl.entity.Team;
+import study.querydsl.entity.UserDto;
 
 @SpringBootTest
 @Transactional
@@ -184,6 +192,18 @@ public class QuerydslBasicTest {
 
         assertThat(result).extracting("age")
             .containsExactly(40);
+
+        // 별칭이 다를 떄
+        List<UserDto> result4 = queryFactory
+            .select(Projections.fields(UserDto.class,
+                member.username.as("name"),
+                ExpressionUtils.as(
+                    JPAExpressions
+                        .select(memberSub.age.max())
+                        .from(memberSub), "age")
+            ))
+            .from(member)
+            .fetch();
     }
 
     @Test
@@ -291,4 +311,145 @@ public class QuerydslBasicTest {
             .fetchOne();
     }
 
+    // 순수 JPA 에서 DTO 조회 코드
+    void test00() {
+        List<MemberDto> result = em.createQuery(
+            "SELECT new study.querydsl.dto.MemberDto(m.username, m.age) FROM MEMBER m",
+            MemberDto.class).getResultList();
+    }
+
+    @Test
+    void test01() {
+        // 프로퍼티에 접근
+        List<MemberDto> result2 = queryFactory.select(
+                Projections.bean(MemberDto.class, member.username, member.age))
+            .from(member)
+            .fetch();
+        for (MemberDto member : result2) {
+            System.out.println(member.toString());
+        }
+        System.out.println();
+
+        // 필드에 직접 접근
+        List<MemberDto> result3 = queryFactory.select(Projections
+                .fields(MemberDto.class, member.username, member.age))
+            .from(member)
+            .fetch();
+        for (MemberDto member : result2) {
+            System.out.println(member.toString());
+        }
+        System.out.println();
+    }
+
+    // 별칭이 다를 떄
+    void test02() {
+        QMember memberSub = new QMember("memberSub");
+        List<UserDto> fetch = queryFactory
+            .select(Projections.fields(UserDto.class,
+                member.username.as("name"),
+                ExpressionUtils.as(
+                    JPAExpressions
+                        .select(memberSub.age.max())
+                        .from(memberSub), "age")
+            ))
+            .from(member)
+            .fetch();
+    }
+
+    // 생성자 사용
+    void test03() {
+        List<MemberDto> result = queryFactory
+            .select(Projections.constructor(MemberDto.class,
+                member.username,
+                member.age))
+            .from(member)
+            .fetch();
+    }
+
+    // QueryProjection 활용
+    void test04() {
+        List<MemberDto> result = queryFactory
+            .select(new QMemberDto(
+                member.username,
+                member.age))
+            .from(member)
+            .fetch();
+
+        List<String> result0 = queryFactory
+            .select(member.username).distinct()
+            .from(member)
+            .fetch();
+    }
+
+    // 동적 쿼리 - BooleanBuilder
+    private List<Member> searchMember1(String usernameCond, Integer ageCond) {
+        BooleanBuilder builder = new BooleanBuilder();
+        if (usernameCond != null) {
+            builder.and(member.username.eq(usernameCond));
+        }
+        if (ageCond != null) {
+            builder.and(member.age.eq(ageCond));
+        }
+        return queryFactory.selectFrom(member)
+            .where(builder)
+            .fetch();
+    }
+    @Test
+    public void dynamicQuery_booleanBuilder() throws Exception {
+        String usernameParam = "member1";
+        Integer ageParam = 10;
+        List<Member> result = searchMember1(usernameParam, ageParam);
+        Assertions.assertThat(result.size()).isEqualTo(1);
+    }
+
+    // 동적 쿼리 - where 다중 파라미터
+    private BooleanExpression usernameEq(String usernameCond) {
+        return usernameCond != null ? member.username.eq(usernameCond) : null;
+    }
+    private BooleanExpression ageEq(Integer ageCond) {
+        return ageCond != null ? member.age.eq(ageCond) : null;
+    }
+    private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+        return queryFactory.selectFrom(member)
+            .where(usernameEq(usernameCond), ageEq(ageCond))
+            .fetch();
+    }
+    @Test
+    public void dynamicQuery_whereParam() throws Exception {
+        String usernameParam = "member1";
+        Integer ageParam = 10;
+        List<Member> result = searchMember2(usernameParam, ageParam);
+        Assertions.assertThat(result.size()).isEqualTo(1);
+    }
+
+    // 수정 삭제 벌크 연산
+    void test05() {
+        long count = queryFactory.update(member)
+            .set(member.username, "비회원")
+            .where(member.age.lt(28))
+            .execute();
+
+        long count1 = queryFactory.update(member)
+            .set(member.age, member.age.add(1))
+            .execute();
+
+        long count2 = queryFactory.delete(member)
+            .where(member.age.gt(18))
+            .execute();
+
+    }
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
