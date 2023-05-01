@@ -394,6 +394,7 @@ public class QuerydslBasicTest {
             .where(builder)
             .fetch();
     }
+
     @Test
     public void dynamicQuery_booleanBuilder() throws Exception {
         String usernameParam = "member1";
@@ -406,14 +407,17 @@ public class QuerydslBasicTest {
     private BooleanExpression usernameEq(String usernameCond) {
         return usernameCond != null ? member.username.eq(usernameCond) : null;
     }
+
     private BooleanExpression ageEq(Integer ageCond) {
         return ageCond != null ? member.age.eq(ageCond) : null;
     }
+
     private List<Member> searchMember2(String usernameCond, Integer ageCond) {
         return queryFactory.selectFrom(member)
             .where(usernameEq(usernameCond), ageEq(ageCond))
             .fetch();
     }
+
     @Test
     public void dynamicQuery_whereParam() throws Exception {
         String usernameParam = "member1";
@@ -436,20 +440,20 @@ public class QuerydslBasicTest {
         long count2 = queryFactory.delete(member)
             .where(member.age.gt(18))
             .execute();
+    }
 
+    // sql_function 호출하기
+    void test06() {
+        String result = queryFactory
+            .select(Expressions.stringTemplate("function('replace', {0}, {1}, {2})", member.username, "member", "M"))
+            .from(member)
+            .fetchFirst();
+        String result1 = queryFactory
+            .select(member.username)
+            .from(member)
+                .where(member.username
+                    .eq(Expressions.stringTemplate("function('lower', {0})", member.username))).fetchFirst();
     }
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
