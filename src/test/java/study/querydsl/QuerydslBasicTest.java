@@ -25,12 +25,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import study.querydsl.dto.MemberDto;
+import study.querydsl.dto.QMemberDto;
+import study.querydsl.dto.UserDto;
 import study.querydsl.entity.Member;
-import study.querydsl.entity.MemberDto;
 import study.querydsl.entity.QMember;
-import study.querydsl.entity.QMemberDto;
 import study.querydsl.entity.Team;
-import study.querydsl.entity.UserDto;
 
 @SpringBootTest
 @Transactional
@@ -445,14 +445,17 @@ public class QuerydslBasicTest {
     // sql_function 호출하기
     void test06() {
         String result = queryFactory
-            .select(Expressions.stringTemplate("function('replace', {0}, {1}, {2})", member.username, "member", "M"))
+            .select(
+                Expressions.stringTemplate("function('replace', {0}, {1}, {2})", member.username,
+                    "member", "M"))
             .from(member)
             .fetchFirst();
         String result1 = queryFactory
             .select(member.username)
             .from(member)
-                .where(member.username
-                    .eq(Expressions.stringTemplate("function('lower', {0})", member.username))).fetchFirst();
+            .where(member.username
+                .eq(Expressions.stringTemplate("function('lower', {0})", member.username)))
+            .fetchFirst();
     }
 
 
