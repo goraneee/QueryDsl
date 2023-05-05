@@ -63,6 +63,8 @@ public class MemberJpaRepository {
     }
 
 
+    /*
+
     public List<MemberTeamDto> searchByBuilder(MemberSearchCondition condition) {
         BooleanBuilder builder = new BooleanBuilder();
         if(hasText(condition.getUsername())){
@@ -79,8 +81,7 @@ public class MemberJpaRepository {
             .fetch();
     }
 
-
-    /*
+     */
     public List<MemberTeamDto> searchByBuilder(MemberSearchCondition condition) {
         BooleanBuilder builder = new BooleanBuilder();
         if (hasText(condition.getUsername())) {
@@ -89,7 +90,12 @@ public class MemberJpaRepository {
         if (hasText(condition.getTeamName())) {
             builder.and(team.name.eq(condition.getTeamName()));
         }
-
+        if (condition.getAgeGoe() != null) {
+            builder.and(member.age.goe(condition.getAgeGoe()));
+        }
+        if (condition.getAgeLoe() != null) {
+            builder.and(member.age.loe(condition.getAgeLoe()));
+        }
         return queryFactory
             .select(new QMemberTeamDto(
                 member.id,
@@ -101,7 +107,8 @@ public class MemberJpaRepository {
             .leftJoin(member.team, team)
             .where(builder)
             .fetch();
-    }*/
+    }
+
 
 
 }
