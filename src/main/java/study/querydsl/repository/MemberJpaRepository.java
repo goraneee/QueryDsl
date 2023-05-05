@@ -1,31 +1,27 @@
 package study.querydsl.repository;
 
 import static org.springframework.util.StringUtils.hasText;
+import static study.querydsl.entity.QMember.member;
+import static study.querydsl.entity.QTeam.team;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import java.util.Optional;
 import javax.persistence.EntityManager;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import study.querydsl.dto.MemberSearchCondition;
 import study.querydsl.dto.MemberTeamDto;
 import study.querydsl.dto.QMemberTeamDto;
 import study.querydsl.entity.Member;
-import study.querydsl.entity.QMember;
-import study.querydsl.entity.QTeam;
 
 @Repository
 public class MemberJpaRepository {
 
 
     private final EntityManager em;
-    private final JPAQueryFactory queryFactory;
-    private final QMember member = QMember.member;
-    private final QTeam team = QTeam.team;
 
-    
+    private final JPAQueryFactory queryFactory;
 
 
     public MemberJpaRepository(EntityManager em) {
@@ -62,26 +58,6 @@ public class MemberJpaRepository {
             .fetch();
     }
 
-
-    /*
-
-    public List<MemberTeamDto> searchByBuilder(MemberSearchCondition condition) {
-        BooleanBuilder builder = new BooleanBuilder();
-        if(hasText(condition.getUsername())){
-            builder.and(member.username.eq(condition.getUsername()));
-        }
-        if(hasText(condition.getTeamName())){
-            builder.and(member.team.name.eq(condition.getTeamName()));
-        }
-        return queryFactory.select(
-        new QMemberTeamDto(member.id, member.username, member.age, team.id, team.name))
-            .from(member)
-            .leftJoin(member.team, team)
-            .where(builder)
-            .fetch();
-    }
-
-     */
     public List<MemberTeamDto> searchByBuilder(MemberSearchCondition condition) {
         BooleanBuilder builder = new BooleanBuilder();
         if (hasText(condition.getUsername())) {
@@ -108,7 +84,5 @@ public class MemberJpaRepository {
             .where(builder)
             .fetch();
     }
-
-
 
 }
