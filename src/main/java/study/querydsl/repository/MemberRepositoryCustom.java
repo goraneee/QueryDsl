@@ -16,4 +16,3 @@ public interface MemberRepositoryCustom {
     Page<MemberTeamDto> searchPageComplex(MemberSearchCondition condition, Pageable pageable);
 
 }
-L
